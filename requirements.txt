@@ -6,3 +6,4 @@ drf-yasg
 djangorestframework-simplejwt
 Faker
 django-cors-headers
+flake8

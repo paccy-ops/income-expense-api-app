@@ -1,0 +1,16 @@
+[flake8]
+exclude =
+   # exclude these directories for linting checks
+    .git,
+    __pycache__,
+    docs/source/conf.py,
+    old,
+    build,
+    dist,
+    venv,
+    migrations,
+    manage.py,
+    settings.py
+    
+max-complexity = 10
+max-line-length = 199

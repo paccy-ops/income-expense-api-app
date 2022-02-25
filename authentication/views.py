@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
-from django.utils.encoding import smart_str, force_str, smart_bytes, \
+from django.utils.encoding import smart_str, smart_bytes, \
     DjangoUnicodeDecodeError
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from drf_yasg import openapi
@@ -127,7 +127,6 @@ class RequestPasswordResetEmail(generics.GenericAPIView):
     serializer_class = serializers.ResetPasswordRequestSerializer
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
         email = request.data['email']
         if User.objects.filter(email=email).exists():
             user = User.objects.get(email=email)
