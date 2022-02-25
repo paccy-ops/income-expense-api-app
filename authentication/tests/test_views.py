@@ -1,5 +1,3 @@
-import email
-
 from .test_setup import TestSetup
 from ..models import User
 
