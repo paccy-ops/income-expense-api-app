@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "../authentication"
+		},
+		{
+			"path": "../expenses"
+		},
+		{
+			"path": "../incomeexpenseapi"
+		},
+		{
+			"path": "../templates"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../venv"
+		},
+		{
+			"path": "../income"
+		}
+	]
+}
