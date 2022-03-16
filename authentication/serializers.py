@@ -1,12 +1,14 @@
 from django.contrib import auth
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.forms import ValidationError
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
-
+from rest_framework_simplejwt.tokens import RefreshToken
 from authentication.models import User
 from authentication.utils import Util
+from rest_framework_simplejwt.tokens import TokenError
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -38,11 +40,17 @@ class LoginSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(max_length=255, min_length=5)
     password = serializers.CharField(max_length=68, min_length=6, write_only=True)
     username = serializers.EmailField(max_length=255, min_length=5, read_only=True)
-    tokens = serializers.CharField(read_only=True)
+    tokens = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ['email', 'password', 'username', 'tokens']
+    def get_tokens(self,obj):
+        user = User.objects.get(email=obj['email'])
+        return{
+            "access":user.tokens()['access'],
+            "refresh":user.tokens()['refresh']
+        }
 
     def validate(self, attrs):
         email = attrs['email']
@@ -63,10 +71,11 @@ class LoginSerializer(serializers.ModelSerializer):
 
 class ResetPasswordRequestSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(min_length=4)
+    redirect_url = serializers.CharField(max_length=500,required=False)
 
     class Meta:
         model = User
-        fields = ['email']
+        fields = ['email','redirect_url']
 
 
 class SetNewPasswordSerializer(serializers.Serializer):
@@ -116,3 +125,17 @@ class MakeSuperUserSerializer(serializers.Serializer):
             email_data_to_send = {'subject': subject, 'body': email_body, 'to_email': user.email}
             Util.send_email(email_data_to_send)
             return user
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+    def validate(self, attrs):
+        self.token = attrs['refresh']
+        return attrs
+
+    def save(self, **kwargs):
+        try:
+            RefreshToken(self.token).blacklist()
+
+        except TokenError:
+            self.fail("bad token")

@@ -9,6 +9,8 @@ urlpatterns = [
     path('register/', views.RegisterView.as_view(), name="register"),
     path('make-superuser/', views.MakeSuperuser.as_view(), name="make-superuser"),
     path('login/', views.LoginAPIView.as_view(), name="login"),
+    path('user/', views.AuthUserAPIView.as_view(), name="user"),
+    path('logout/', views.LogoutAPIView.as_view(), name="logout"),
     path('email-verify/', views.VerifyEmail.as_view(), name="email-verify"),
     path('password-reset-email/', views.RequestPasswordResetEmail.as_view(), name="request-reset-email"),
     path('password-reset/<uidb64>/<token>/', views.PasswordTokenCheckAPIView.as_view(),

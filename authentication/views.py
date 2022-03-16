@@ -1,3 +1,5 @@
+from django.http import HttpResponsePermanentRedirect
+from django.shortcuts import redirect
 import jwt
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -18,9 +20,12 @@ from authentication import serializers
 from authentication.models import User
 from authentication.renderers import UserRender
 from authentication.utils import Util
-
+import os
 
 # Create your views here.
+
+class CustomerRedirect(HttpResponsePermanentRedirect):
+    allowed_schema = [os.environ.get('APP_SCHEME'),'http','https']
 
 class RegisterView(generics.GenericAPIView):
     """register new user"""
@@ -49,38 +54,6 @@ class RegisterView(generics.GenericAPIView):
         }
         return Response(res, status=status.HTTP_201_CREATED)
 
-    # email_param_config = openapi.Parameter(
-    #     'email', in_=openapi.IN_QUERY, type=openapi.TYPE_STRING, description="Email"
-    # )
-    #
-    # @swagger_auto_schema(manual_parameters=[email_param_config])
-    # def get(self, request):
-    #     email = request.GET.get('email')
-    #     if User.objects.filter(email=email).exists():
-    #         user = User.objects.get(email=email)
-    #         if user.is_superuser:
-    #             msg = {"message": f"{user.username} is already a superuser"}
-    #             return Response(msg, status=status.HTTP_400_BAD_REQUEST)
-    #         if not user.is_superuser:
-    #             user.is_superuser = True
-    #             user.is_staff = True
-    #             user.save()
-    #             subject = " expense notification"
-    #             email_body = f"Hi  {user.username}, {email} has pointed as admin."
-    #             email_data_to_send = {'subject': subject, 'body': email_body, 'to_email': user.email}
-    #             Util.send_email(email_data_to_send)
-    #             res = {
-    #                 "message": f"{user.username} is now admin"
-    #             }
-    #             return Response(res, status=status.HTTP_200_OK)
-    #
-    #     else:
-    #         if email is None:
-    #             res = {"message": "please provide email and try again"},
-    #             return Response(res, status=status.HTTP_400_BAD_REQUEST)
-    #         if email:
-    #             res = {"message": f"user with {email} email does not exist "}
-    #             return Response(res, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VerifyEmail(views.APIView):
@@ -134,11 +107,12 @@ class RequestPasswordResetEmail(generics.GenericAPIView):
             token = PasswordResetTokenGenerator().make_token(user)
             relativelink = reverse('authentication:password-reset-confirm',
                                    kwargs={'uidb64': uidb64, 'token': token})
+            redirect_url = request.data.get('redirect_url','')
             domain = get_current_site(request=request).domain
             absurl = f'http://{domain}{relativelink}'
-            subject = "Rest  Your password"
+            subject = "Rest  Your password" 
             email_body = f"Hello,Use link below to reset your password " \
-                         f"\n{absurl}"
+                         f"\n{absurl}?redirect_url={redirect_url}"
             email_data_to_send = {'subject': subject, 'body': email_body, 'to_email': user.email}
             Util.send_email(email_data_to_send)
 
@@ -150,21 +124,31 @@ class PasswordTokenCheckAPIView(generics.GenericAPIView):
 
     @staticmethod
     def get(request, uidb64, token):
+        redirect_url = request.GET.get('redirect_url')
         try:
             id = smart_str(urlsafe_base64_decode(uidb64))
             user = User.objects.get(id=id)
             if not PasswordResetTokenGenerator().check_token(user, token):
-                return Response({'error': 'Token is not valid, please request a new one'},
-                                status=status.HTTP_401_UNAUTHORIZED)
-            return Response({'success': True,
-                             'message': 'Credentials Valid',
-                             'uidb64': uidb64,
-                             'token': token
-                             }, status=status.HTTP_200_OK)
+                if len(redirect_url)>3:
+                    return CustomerRedirect(redirect_url+'?token_valid=False')
+                else:
+                    return CustomerRedirect(os.environ.get("FRONTEND_URL",'')+'?token_valid=False')
+                # return Response({'error': 'Token is not valid, please request a new one'},
+                #                 status=status.HTTP_401_UNAUTHORIZED)
+            if redirect_url and len(redirect_url)>3:
+                return CustomerRedirect(redirect_url+f'?token_valid=True&?message=Credentials Valid&?uidb64={uidb64}&?token={token}')
+            else:
+                return CustomerRedirect(os.environ.get("FRONTEND_URL",'')+'?token_valid=False')
+            # return Response({'success': True,
+            #                  'message': 'Credentials Valid',
+            #                  'uidb64': uidb64,
+            #                  'token': token
+            #                  }, status=status.HTTP_200_OK)
 
         except DjangoUnicodeDecodeError:
-            return Response({'error': 'Token is not valid, please request a new one'},
-                            status=status.HTTP_401_UNAUTHORIZED)
+            return CustomerRedirect(redirect_url+'?token_valid=False')
+            # return Response({'error': 'Token is not valid, please request a new one'},
+            #                 status=status.HTTP_401_UNAUTHORIZED)
 
 
 class SetNewPasswordAPIView(generics.GenericAPIView):
@@ -191,3 +175,21 @@ class MakeSuperuser(generics.GenericAPIView):
         return Response({'success': True,
                          'message': f' {user.username} is now a superuser '},
                         status=status.HTTP_200_OK)
+
+class LogoutAPIView(generics.GenericAPIView):
+      serializer_class = serializers.LogoutSerializer
+      permission_class = (permissions.IsAuthenticated,)
+
+      def post(self,request): 
+          serializer = self.serializer_class(data=request.data)
+          serializer.is_valid(raise_exception=True)
+          serializer.save()
+
+          return Response(status=status.HTTP_204_NO_CONTENT)
+
+class AuthUserAPIView(generics.GenericAPIView):
+    permission_class = (permissions.IsAuthenticated)
+    def get(self,request):
+        user = User.objects.get(pk=request.user.pk)
+        serializer = serializers.RegisterSerializer(user)
+        return Response(serializer.data)

@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
-from re import T
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,12 +43,14 @@ INSTALLED_APPS = [
     'expenses.apps.ExpensesConfig',
     'income.apps.IncomeConfig',
     'userstats.apps.UserstatsConfig',
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 5,
     'NON_FIELD_ERRORS_KEY': 'error',
+    'EXCEPTION_HANDLER':'utils.exceptionhandler.customer_exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
@@ -187,6 +188,9 @@ JWT_SECRET_KEY = "ncndscnsdcdscndscvndmscdscasmndcv"
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER",' ')
-EMAIL_HOST_PASSWORD = os.environ.get("votetante@uc",' ')
+EMAIL_HOST_USER='votetante@gmail.com'
+EMAIL_HOST_PASSWORD='votetante@uc'
+# EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+# EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+
 CORS_ALLOW_ALL_ORIGINS=True
